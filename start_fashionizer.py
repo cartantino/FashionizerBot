@@ -34,11 +34,8 @@ def fileparts(fn):
 
 
 def textHandler(bot, message, chat_id, text):
-	if(text == 'yes' or text == 'Yes'):
-		bot.sendMessage(chat_id, "Retrieving images..")
-	else:
-		bot.sendMessage(chat_id, "I do not understand what you said")
-	return text
+	message = "Hello, I am FashionizerBot.. to see what can I do send me an image of someone dressing something cool"
+	return message
 
 
 def imageHandler(bot, message, chat_id, local_filename, name):
