@@ -1,23 +1,53 @@
+import json
 import logging
-import time
-import json, os, sys
-import urllib
+import os
+import sys
 import tempfile
+import time
+import urllib
+
 import requests
+from tensorflow import keras
+from keras.models import load_model
+
+import cv2
+import MaskRCNN.Mask_RCNN.mrcnn as segmentation_model
+from MaskRCNN.Mask_RCNN.mrcnn import model as modellib
+from MaskRCNN.Mask_RCNN.mrcnn.utils import Dataset
+from MaskRCNN.segmentation_model import myMaskRCNNConfig
+from MaskRCNN.segmentation_model import Config, MaskRCNN, visualize
+
 #import re, hashlib
 
+
+def load_segmentation_model():
+    print("Settings configuration of the segmentation model...")
+    config = myMaskRCNNConfig()
+	#Loading the model in the inference mode
+    print("Loading model...")
+    model = modellib.MaskRCNN(mode="inference", config=config, model_dir=os.path.join(os.getcwd(),"MaskRCNN","mask_rcnn_"))
+    print("Loading weights...")
+    model.load_weights(os.path.join(os.getcwd(),"MaskRCNN","mask_rcnn_","mask_rcnn_.1591234121.0669577.h5"), by_name=True)
+    return model
+
+
 class Bot:
-    def __init__(self, bot_id, download_folder=tempfile.gettempdir()+os.sep):
+    def __init__(self, bot_id,  download_folder=tempfile.gettempdir()+os.sep, segmentation_model = load_segmentation_model()):
         self.bot_id = bot_id
         self.base_url = "https://api.telegram.org/bot" + bot_id + "/"
         self.file_url = "https://api.telegram.org/file/bot" + bot_id + "/"
         self.max_update_id = 0
         self.encoding  = 'utf-8'
         self.download_folder = download_folder
+        self.segmentation_model = segmentation_model
+        
 
     def query(self, page, params):
         response = urllib.request.urlopen( self.base_url + page, urllib.parse.urlencode(params).encode(self.encoding) )
         return json.loads(response.read().decode(self.encoding))
+
+    def getSegmentationModel(self):
+        return self.segmentation_model
 
     def getMessageType(self, message):
         if 'photo' in message:
@@ -92,6 +122,8 @@ class Bot:
         return data['result']
 
 
+
+
 if __name__ == "__main__":
     bot = Bot('128366843:AAHovviK9AQDbcWJkM9JkqDAt8B5oLUUCQI')
     while True:
@@ -110,4 +142,4 @@ if __name__ == "__main__":
                 local_filename = bot.getFile(u['message']['document']['file_id'])
                 print(local_filename)
         time.sleep(2)
-    
+

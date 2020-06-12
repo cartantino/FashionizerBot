@@ -1,14 +1,16 @@
+import json
 import logging
-import time
-import json, os, sys
-import urllib
+import os
+import sys
 import tempfile
-import requests
-from Bot import Bot
+import time
+import urllib
 
+from Bot import Bot
 
 def doNothing(*arg):
     pass
+
 
 class Updater:
     def __init__(self, bot_id, waitingTime=0, download_folder=tempfile.gettempdir()+os.sep):
@@ -28,6 +30,7 @@ class Updater:
     def setVoiceHandler(self, f):
         self.voiceHandler = f
 
+   
     def start(self):
         while True:
             for u in self.bot.getUpdates():
@@ -37,9 +40,9 @@ class Updater:
                 chat_id     = message['chat']['id']
                 
                 try:
-                    name        = message['chat']['first_name']
+                    name = message['chat']['first_name']
                 except:
-                    name        = message['from']['username']
+                    name = message['from']['username']
                 pass
 
                 message_id  = message['message_id']
