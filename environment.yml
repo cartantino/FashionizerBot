@@ -1,4 +1,4 @@
-name: VIPM
+name: VIPM_PROVA
 channels:
   - anaconda
   - defaults
@@ -164,5 +164,5 @@ dependencies:
     - widgetsnbextension==3.5.1
     - wrapt==1.12.1
     - zipp==3.1.0
-prefix: C:\Users\hamza\anaconda3\envs\vipm
+prefix: C:\Users\Ccarta\anaconda3\envs\vipm
 

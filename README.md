@@ -11,5 +11,5 @@ In project root:
 ```
 conda env create -f environment.yml
 conda activate VIPM
-python exec.py
+python start_fashionizer.py
 ```

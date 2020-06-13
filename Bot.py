@@ -1,21 +1,32 @@
 import json
 import logging
 import os
+import pickle
 import sys
 import tempfile
 import time
 import urllib
 
-import requests
-from tensorflow import keras
-from keras.models import load_model
-
 import cv2
+import keras
+import matplotlib.pyplot as plt
+import requests
+import tensorflow as tf
+from classification_models.keras import Classifiers
+from tensorflow.keras import Model
+from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input
+from tensorflow.keras.layers import (Conv2D, Dense, Dropout, Flatten,
+                          GlobalAveragePooling2D, MaxPooling2D)
+from keras.models import Sequential, load_model
+from sklearn import svm
+from sklearn.svm import SVC
+from tensorflow import keras
+
 import MaskRCNN.Mask_RCNN.mrcnn as segmentation_model
 from MaskRCNN.Mask_RCNN.mrcnn import model as modellib
 from MaskRCNN.Mask_RCNN.mrcnn.utils import Dataset
-from MaskRCNN.segmentation_model import myMaskRCNNConfig
-from MaskRCNN.segmentation_model import Config, MaskRCNN, visualize
+from MaskRCNN.segmentation_model import (Config, MaskRCNN, myMaskRCNNConfig,
+                                         visualize)
 
 #import re, hashlib
 
@@ -30,16 +41,37 @@ def load_segmentation_model():
     model.load_weights(os.path.join(os.getcwd(),"MaskRCNN","mask_rcnn_","mask_rcnn_.1591234121.0669577.h5"), by_name=True)
     return model
 
+def load_classification_model():
+    print("Loading classification model...")
+    #base_model = ResNet50(input_shape=(224,224,3), weights = 'imagenet', include_top = False)
+    #output = GlobalAveragePooling2D()(base_model.output)
+    #model = Model(inputs=base_model.input, outputs=output)
+    model = [1,2,3,4]
+    return model
+
+def load_feature_extractor():
+    ResNet18, preprocess_input_function = Classifiers.get('resnet18')
+    #base_model = ResNet18(input_shape=(224,224,3), weights='imagenet', include_top=False)
+    #output = keras.layers.GlobalAveragePooling2D()(base_model.output)
+    #model = keras.models.Model(inputs=[base_model.input], outputs=[output])
+    with open(os.path.join(os.getcwd(), 'classifier','resnet18_model.pickle'), 'rb') as handle:
+        model = pickle.load(handle)
+    return [model, preprocess_input_function]
+
 
 class Bot:
-    def __init__(self, bot_id,  download_folder=tempfile.gettempdir()+os.sep, segmentation_model = load_segmentation_model()):
+    def __init__(self, bot_id,  download_folder=tempfile.gettempdir()+os.sep):
         self.bot_id = bot_id
         self.base_url = "https://api.telegram.org/bot" + bot_id + "/"
         self.file_url = "https://api.telegram.org/file/bot" + bot_id + "/"
         self.max_update_id = 0
         self.encoding  = 'utf-8'
         self.download_folder = download_folder
-        self.segmentation_model = segmentation_model
+        self.segmentation_model = load_segmentation_model()
+        #self.classification_model = load_classification_model()
+        feature_extractor_model = load_feature_extractor()
+        self.extractor_model = feature_extractor_model[0]
+        self.extractor_preprocessing = feature_extractor_model[1]  
         
 
     def query(self, page, params):
@@ -48,6 +80,15 @@ class Bot:
 
     def getSegmentationModel(self):
         return self.segmentation_model
+
+    def getClassificationModel(self):
+        return self.classification_model
+
+    def getFeatureExtractorModel(self):
+        return self.extractor_model
+    
+    def getExtractorPreprocessing(self):
+        return self.extractor_preprocessing
 
     def getMessageType(self, message):
         if 'photo' in message:
@@ -142,4 +183,3 @@ if __name__ == "__main__":
                 local_filename = bot.getFile(u['message']['document']['file_id'])
                 print(local_filename)
         time.sleep(2)
-
