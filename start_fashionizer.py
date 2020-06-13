@@ -11,7 +11,6 @@ import time
 import warnings
 from os import listdir
 
-
 import cv2
 import imutils
 import numpy as np
@@ -28,15 +27,17 @@ from MaskRCNN.Mask_RCNN.mrcnn import visualize
 from Updater import Updater
 
 
-
 def classify_image(img, model_features):
     with open('classifier/clf_resnet50.pickle', 'rb') as handle:
         classifier = pickle.load(handle)
+
+
     dim = (224, 224)
     img = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
     x = preprocess_input(img)
     x= x.reshape((-1, 224, 224, 3))
     features = model_features.predict(x)
+    features = scaler.transform(features)
     pred = classifier.predict(features)
     #prob_pred = classifier.predict_proba(features)
 
@@ -48,6 +49,9 @@ def classify_image(img, model_features):
     return labels[pred[0]], 0.09
 
 def classify_image_svm(img, feature_extractor, svm_classifier):
+    with open('data/scaler.pickle', 'rb') as handle:
+        scaler = pickle.load(handle)
+
     dim = (224, 224)
     img = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
     x = preprocess_input(img)
@@ -55,9 +59,10 @@ def classify_image_svm(img, feature_extractor, svm_classifier):
     neural_features = feature_extractor.predict(x)[0]
     neural_features = neural_features.reshape(len(neural_features),)
     neural_features = [neural_features]
-    pred = svm_classifier.predict(neural_features)
-    #prob_pred = svm_classifier.predict_prob(neural_features)
-    return pred, 0.5
+    features = scaler.transform(neural_features)
+    pred = svm_classifier.predict(features)
+    prob_pred = svm_classifier.predict_proba(features)
+    return pred[0], max(max(prob_pred))
 
 
 # function to get unique values 
@@ -88,15 +93,21 @@ def imageHandler(bot, message, chat_id, local_filename, name):
 
     image = skimage.io.imread(local_filename)
 
-    segmentation_model = bot.getSegmentationModel()
-
-    #classification_model = bot.getClassificationModel()
-    # Segmentation
-    results = segmentation_model.detect([image], verbose=1)
+    with open('classifier/SVM_resnet18_neural_features.pickle', 'rb') as handle:
+        svm_classifier = pickle.load(handle)
+ 
+    print(svm_classifier)
 
     feature_extractor = bot.getFeatureExtractorModel()
     preprocess_input_extractor = bot.getExtractorPreprocessing()
 
+    segmentation_model = bot.getSegmentationModel()
+    #classification_model = bot.getClassificationModel()
+
+    # Segmentation
+    results = segmentation_model.detect([image], verbose=1)
+
+ 
     # Visualize results
     r = results[0]
     mask = r['masks']
@@ -106,7 +117,7 @@ def imageHandler(bot, message, chat_id, local_filename, name):
     #print(mask)
   
     
-    # send back the manipulated image
+    # Create a new file where we will store the new image
     new_fn = os.path.join(dirName, fileBaseName + '_ok' + fileExtension)
 
 
@@ -116,10 +127,6 @@ def imageHandler(bot, message, chat_id, local_filename, name):
     for id_bb in range(len(bboxes)):
         class_ids.append('bbox_' + str(id_bb))
 
-    with open('classifier/SVM_resnet18_neural_features.pickle', 'rb') as handle:
-        svm_classifier = pickle.load(handle)
- 
-    print(svm_classifier)
 
     predicted_labels = []
     pred_probabilities = []
@@ -138,17 +145,20 @@ def imageHandler(bot, message, chat_id, local_filename, name):
         pred_probabilities.append(probabilities)
 
     
-    [labels] = unique(predicted_labels)
+    labels = unique(predicted_labels)
+    print(labels)
     #for label in labels:
     #    n_label = predicted_labels.count(label)
     #    bot.sendMessage(chat_id, "I have found " + str(n_label) + " of label")
+    if(len(bboxes) == 0):
+        bot.sendMessage("Nothing found")
+    else:
+        visualize.display_instances(image, bboxes, r['masks'], r['class_ids'], predicted_labels , pred_probabilities,  save_dir=dirName, img_name=fileBaseName + "_ok" + fileExtension)
+        bot.sendImage(chat_id, new_fn, "")
+        print("Elaborated image sent to " + name)
 
-    visualize.display_instances(image, bboxes, r['masks'], r['class_ids'], predicted_labels , pred_probabilities,  save_dir=dirName, img_name=fileBaseName + "_ok" + fileExtension)
-    bot.sendImage(chat_id, new_fn, "")
-    print("Elaborated image sent to " + name)
-
-    print("Predictions = " + str(predicted_labels))
-    print("Probabilities = " + str(pred_probabilities))
+    #print("Predictions = " + str(predicted_labels))
+    #print("Probabilities = " + str(pred_probabilities))
 
 
 
