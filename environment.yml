@@ -1,4 +1,4 @@
-name: VIPM_PROVA
+name: VIPM
 channels:
   - anaconda
   - defaults

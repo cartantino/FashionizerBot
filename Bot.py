@@ -56,7 +56,7 @@ def load_feature_extractor():
     return [model, preprocess_input_function]
 
 def load_svm_classifier():
-    with open('classifier/SVM_resnet18_neural_features.pickle', 'rb') as handle:
+    with open('classifier/SVM_resnet18_neural_features_2.pickle', 'rb') as handle:
         svm_classifier = pickle.load(handle)
     return svm_classifier
 

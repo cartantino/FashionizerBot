@@ -27,6 +27,8 @@ from sklearn.svm import SVC
 from MaskRCNN.Mask_RCNN.mrcnn import visualize
 from Updater import Updater
 
+RETRIEVAL_N_IMAGES = 3
+
 
 def classify_image(img, model, preprocess_input):
     dim = (224, 224)
@@ -65,8 +67,8 @@ def classify_image_svm(img, feature_extractor, svm_classifier, preprocess_input)
     neural_features = neural_features.reshape(len(neural_features),)
     neural_features = [neural_features]
     features = scaler.transform(neural_features)
-    pred = svm_classifier.predict(neural_features)
-    prob_pred = svm_classifier.predict_proba(neural_features)
+    pred = svm_classifier.predict(features)
+    prob_pred = svm_classifier.predict_proba(features)
     return pred[0], max(max(prob_pred))
 
 
@@ -102,8 +104,9 @@ def fileparts(fn):
 
 
 def textHandler(bot, message, chat_id, text):
-	message = "Hello, I am FashionizerBot.. to see what can I do send me an image of someone dressing something cool"
-	return message
+    message = "I am FashionizerBot to see what can I do send me an image of someone dressing something cool"
+    bot.sendMessage(chat_id, message)
+    return message
 
 
 def imageHandler(bot, message, chat_id, local_filename, name):
@@ -125,10 +128,6 @@ def imageHandler(bot, message, chat_id, local_filename, name):
     KdTree_retrieval = bot.getKdTree()
     print(svm_classifier)
 
-
-
-    #classification_model = bot.getClassificationModel()
-
     # Segmentation
     results = segmentation_model.detect([image], verbose=1)
 
@@ -137,9 +136,6 @@ def imageHandler(bot, message, chat_id, local_filename, name):
     r = results[0]
     mask = r['masks']
     bboxes = r['rois']
-    #print(bboxes)
-    #print(r['class_ids'])
-    #print(mask)
   
     # Create a new file where we will store the new image
     new_fn = os.path.join(dirName, fileBaseName + '_ok' + fileExtension)
@@ -155,17 +151,24 @@ def imageHandler(bot, message, chat_id, local_filename, name):
     predicted_labels = []
     pred_probabilities = []
     cropped_images = []
+
     
     for i, bb in enumerate(bboxes):
-        #current_mask = mask[:,:,i]
-        #result = image.copy()
-        #result[current_mask != 0] = 255
+        current_mask = mask[:,:,i]
+        # with open('mask/current_mask.pickle', 'wb') as handle:
+        #     pickle.dump(current_mask, handle)
+        # result = image.copy()
+        # with open('mask/result.pickle', 'wb') as handle:
+        #     pickle.dump(result, handle)
+        
+        #result[current_mask != 1] = 255
         cropped = image[bb[0]:bb[2], bb[1]:bb[3]]
-        cv2.imshow("bbox", cropped)
-        cv2.waitKey(0)
-        cropped = preprocess_input_extractor(cropped)  
-        prediction, probabilities = classify_image(cropped, resnet_18_finetuning, bot.getPreprocessingResnet18())
-        #prediction, probabilities = classify_image_svm(cropped, feature_extractor, svm_classifier, bot.getPreprocessingResnet18())
+
+        #cv2.imshow("bbox", cropped)
+        #cv2.waitKey(0)
+        #cropped = preprocess_input_extractor(cropped)  
+        #prediction, probabilities = classify_image(cropped, resnet_18_finetuning, bot.getPreprocessingResnet18())
+        prediction, probabilities = classify_image_svm(cropped, feature_extractor, svm_classifier, bot.getPreprocessingResnet18())
         predicted_labels.append(prediction)
         pred_probabilities.append(probabilities)
         cropped_images.append(cropped)
@@ -173,21 +176,32 @@ def imageHandler(bot, message, chat_id, local_filename, name):
 
 
     if(len(bboxes) == 0):
-        bot.sendMessage(chat_id, "Nothing found")
+        #bot.sendMessage(chat_id, "Nothing found")
+        print("Segmentation failed, looking for something to classify..")
+        prediction, probabilities = classify_image(image, resnet_18_finetuning, bot.getPreprocessingResnet18())
+        if(probabilities >= 60):
+            bot.sendMessage(chat_id, "Found " + prediction + " with " + str(probabilities) + 'of reliability')
+            distances, filenames = image_retrieval(image, feature_extractor, KdTree_retrieval, bot.getPreprocessingResnet18(), RETRIEVAL_N_IMAGES)
+            bot.sendMessage(chat_id, "These are the " + str(RETRIEVAL_N_IMAGES) + " most similar images to " + prediction)
+            for dist, file_ in zip(distances, filenames):
+                head, tail = os.path.split(file_.replace('/', '\\'))
+                CURRENT_PATH = os.path.join(cur_dir, 'Dataset', 'fashion-dataset','images', tail)
+                print("CURRENT PATH = " + CURRENT_PATH)
+                bot.sendImage(chat_id, CURRENT_PATH, "")
+        else:
+            bot.sendMessage(chat_id, "I am working hard to find something but I can't.. can you take a better shot?")
+        
     else:
         bbox_colors = visualize.display_instances(image, bboxes, r['masks'], r['class_ids'], predicted_labels , pred_probabilities,  save_dir=dirName, img_name=fileBaseName + "_ok" + fileExtension)
         bot.sendImage(chat_id, new_fn, "")
         print("Elaborated image sent to " + name)
-        print(bbox_colors)
-        print(predicted_labels)
         unique_labels = unique(predicted_labels)
-        print(unique_labels)
 
         for label in unique_labels:
             n_label = predicted_labels.count(label)
             bot.sendMessage(chat_id, "I have found " + str(n_label) + " " + label)
 
-        k = 3
+        k = RETRIEVAL_N_IMAGES
         for prediction, cropped, color in zip(predicted_labels, cropped_images, bbox_colors):
             distances, filenames = image_retrieval(cropped, feature_extractor, KdTree_retrieval, bot.getPreprocessingResnet18(), k)
             bot.sendMessage(chat_id, "These are the " + str(k) + " most similar images to " + prediction + " found in " + color + " bounding box")
