@@ -14,7 +14,6 @@ import requests
 import tensorflow as tf
 from classification_models.keras import Classifiers
 from tensorflow.keras import Model
-from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input
 from tensorflow.keras.layers import (Conv2D, Dense, Dropout, Flatten,
                           GlobalAveragePooling2D, MaxPooling2D)
 from keras.models import Sequential, load_model
@@ -35,7 +34,7 @@ def load_segmentation_model():
     print("Settings configuration of the segmentation model...")
     config = myMaskRCNNConfig()
 	#Loading the model in the inference mode
-    print("Loading model...")
+    print("Loading segmentation model...")
     model = modellib.MaskRCNN(mode="inference", config=config, model_dir=os.path.join(os.getcwd(),"MaskRCNN","mask_rcnn_"))
     print("Loading weights...")
     model.load_weights(os.path.join(os.getcwd(),"MaskRCNN","mask_rcnn_","mask_rcnn_.1591234121.0669577.h5"), by_name=True)
@@ -43,11 +42,9 @@ def load_segmentation_model():
 
 def load_classification_model():
     print("Loading classification model...")
-    #base_model = ResNet50(input_shape=(224,224,3), weights = 'imagenet', include_top = False)
-    #output = GlobalAveragePooling2D()(base_model.output)
-    #model = Model(inputs=base_model.input, outputs=output)
-    model = [1,2,3,4]
-    return model
+    resnet_18_finetuning = keras.models.load_model('classifier/resnet18_finetuning_subCategory.h5')
+    resnet_18_finetuning.summary()
+    return resnet_18_finetuning
 
 def load_feature_extractor():
     ResNet18, preprocess_input_function = Classifiers.get('resnet18')
@@ -57,6 +54,19 @@ def load_feature_extractor():
     with open(os.path.join(os.getcwd(), 'classifier','resnet18_model.pickle'), 'rb') as handle:
         model = pickle.load(handle)
     return [model, preprocess_input_function]
+
+def load_svm_classifier():
+    with open('classifier/SVM_resnet18_neural_features.pickle', 'rb') as handle:
+        svm_classifier = pickle.load(handle)
+    return svm_classifier
+
+def load_kdTree():
+    with open('kdtree_model/KDTree_neuralFeatures.pickle', 'rb') as handle:
+        kdTree = pickle.load(handle)
+    return kdTree
+
+
+
 
 
 class Bot:
@@ -71,7 +81,10 @@ class Bot:
         #self.classification_model = load_classification_model()
         feature_extractor_model = load_feature_extractor()
         self.extractor_model = feature_extractor_model[0]
-        self.extractor_preprocessing = feature_extractor_model[1]  
+        self.extractor_preprocessing = feature_extractor_model[1]
+        self.svm = load_svm_classifier() 
+        self.resnet_finetuning = load_classification_model()
+        self.kdTree = load_kdTree()
         
 
     def query(self, page, params):
@@ -81,14 +94,23 @@ class Bot:
     def getSegmentationModel(self):
         return self.segmentation_model
 
-    def getClassificationModel(self):
-        return self.classification_model
+    def getResnetFinetuned(self):
+        return self.resnet_finetuning
+
+    def getSVM(self):
+        return self.svm
 
     def getFeatureExtractorModel(self):
         return self.extractor_model
     
     def getExtractorPreprocessing(self):
         return self.extractor_preprocessing
+
+    def getPreprocessingResnet18(self):
+        return self.extractor_preprocessing
+
+    def getKdTree(self):
+        return self.kdTree
 
     def getMessageType(self, message):
         if 'photo' in message:

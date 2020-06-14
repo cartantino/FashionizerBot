@@ -15,40 +15,45 @@ import cv2
 import imutils
 import numpy as np
 import skimage.io
+import sklearn.neighbors
 import tensorflow as tf
 from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 from numpy import asarray, zeros
 from PIL import Image
+from sklearn.neighbors import KDTree
 from sklearn.svm import SVC
-from tensorflow.keras.applications.resnet50 import preprocess_input
 
 from MaskRCNN.Mask_RCNN.mrcnn import visualize
 from Updater import Updater
 
 
-def classify_image(img, model_features):
-    with open('classifier/clf_resnet50.pickle', 'rb') as handle:
-        classifier = pickle.load(handle)
-
-
+def classify_image(img, model, preprocess_input):
     dim = (224, 224)
     img = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
     x = preprocess_input(img)
-    x= x.reshape((-1, 224, 224, 3))
-    features = model_features.predict(x)
-    features = scaler.transform(features)
-    pred = classifier.predict(features)
-    #prob_pred = classifier.predict_proba(features)
+    x = np.expand_dims(x, axis=0)   
+    pred = model.predict(x)
+    probabilities = pred[0]
+    max_prob_index = np.argmax(probabilities,axis=0)
+    max_prob = probabilities[max_prob_index]
+ 
+    print(max_prob)
+    print(max_prob_index)
 
-    with open('classifier/labels_resnet50.pickle', 'rb') as handle:
+    with open('data/labels_resnet18.pickle', 'rb') as handle:
         labels = pickle.load(handle)
 
     labels = [ labels[key] for key in labels ]
-    print(pred[0])
-    return labels[pred[0]], 0.09
 
-def classify_image_svm(img, feature_extractor, svm_classifier):
+    predicted_label = labels[max_prob_index]
+    print(predicted_label)
+    #print(pred[0])
+    #return labels[pred[0]], 0.09
+    return predicted_label, max_prob
+
+
+def classify_image_svm(img, feature_extractor, svm_classifier, preprocess_input):
     with open('data/scaler.pickle', 'rb') as handle:
         scaler = pickle.load(handle)
 
@@ -60,9 +65,28 @@ def classify_image_svm(img, feature_extractor, svm_classifier):
     neural_features = neural_features.reshape(len(neural_features),)
     neural_features = [neural_features]
     features = scaler.transform(neural_features)
-    pred = svm_classifier.predict(features)
-    prob_pred = svm_classifier.predict_proba(features)
+    pred = svm_classifier.predict(neural_features)
+    prob_pred = svm_classifier.predict_proba(neural_features)
     return pred[0], max(max(prob_pred))
+
+
+def image_retrieval(img, feature_extractor, kdTree, preprocess_input):
+    with open('data/filenames.pickle', 'rb') as handle:
+        filenames = pickle.load(handle)
+    dim = (224, 224)
+    img = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
+    x = preprocess_input(img)
+    x = np.expand_dims(x, axis=0)
+    neural_features = feature_extractor.predict(x)[0]
+    neural_features = neural_features.reshape(len(neural_features),)
+    neural_features = [neural_features]
+    dist, indexes = kdTree.query(neural_features, k = 5) # return 5 images per bb
+    retrieval_filenames = [filenames[index] for index in indexes[0]]
+    distances = dist[0]
+    print(distances)
+    return distances, retrieval_filenames
+
+
 
 
 # function to get unique values 
@@ -93,15 +117,16 @@ def imageHandler(bot, message, chat_id, local_filename, name):
 
     image = skimage.io.imread(local_filename)
 
-    with open('classifier/SVM_resnet18_neural_features.pickle', 'rb') as handle:
-        svm_classifier = pickle.load(handle)
- 
-    print(svm_classifier)
-
+    svm_classifier = bot.getSVM()
+    resnet_18_finetuning = bot.getResnetFinetuned()
+    segmentation_model = bot.getSegmentationModel()
     feature_extractor = bot.getFeatureExtractorModel()
     preprocess_input_extractor = bot.getExtractorPreprocessing()
+    KdTree_retrieval = bot.getKdTree()
+    print(svm_classifier)
 
-    segmentation_model = bot.getSegmentationModel()
+
+
     #classification_model = bot.getClassificationModel()
 
     # Segmentation
@@ -116,7 +141,6 @@ def imageHandler(bot, message, chat_id, local_filename, name):
     #print(r['class_ids'])
     #print(mask)
   
-    
     # Create a new file where we will store the new image
     new_fn = os.path.join(dirName, fileBaseName + '_ok' + fileExtension)
 
@@ -133,32 +157,49 @@ def imageHandler(bot, message, chat_id, local_filename, name):
 
     
     for i, bb in enumerate(bboxes):
-        current_mask = mask[:,:,i]
-        result = image.copy()
-        result[current_mask != 0] = 255
-        cropped = result[bb[0]:bb[2], bb[1]:bb[3]]
-        plt.imshow(cropped)
+        #current_mask = mask[:,:,i]
+        #result = image.copy()
+        #result[current_mask != 0] = 255
+        cropped = image[bb[0]:bb[2], bb[1]:bb[3]]
+        cv2.imshow("bbox", cropped)
+        cv2.waitKey(0)
         cropped = preprocess_input_extractor(cropped)  
-        #prediction, probabilities = classify_image(cropped, classification_model)
-        prediction, probabilities = classify_image_svm(cropped, feature_extractor, svm_classifier)
+        prediction, probabilities = classify_image(cropped, resnet_18_finetuning, bot.getPreprocessingResnet18())
+        #prediction, probabilities = classify_image_svm(cropped, feature_extractor, svm_classifier, bot.getPreprocessingResnet18())
         predicted_labels.append(prediction)
         pred_probabilities.append(probabilities)
+        distances, filenames = image_retrieval(cropped, feature_extractor, KdTree_retrieval, bot.getPreprocessingResnet18())
+        
+        bot.sendMessage(chat_id, "These are the 5 most similar images to " + prediction)
+        for dist, file_ in zip(distances, filenames):
+            head, tail = os.path.split(file_.replace('/', '\\'))
+            print(file_)
+            print("Head = " + head)
+            print("Tail = " + head)
+            CURRENT_PATH = os.path.join(cur_dir, 'Dataset', 'fashion-dataset','images', tail)
+            print("CURRENT PATH = " + CURRENT_PATH)
+            bot.sendImage(chat_id, CURRENT_PATH, dist)
+        
 
     
-    labels = unique(predicted_labels)
-    print(labels)
-    #for label in labels:
-    #    n_label = predicted_labels.count(label)
-    #    bot.sendMessage(chat_id, "I have found " + str(n_label) + " of label")
+    print(predicted_labels)
+    unique_labels = unique(predicted_labels)
+    print(unique_labels)
+
+
+
+
     if(len(bboxes) == 0):
-        bot.sendMessage("Nothing found")
+        bot.sendMessage(chat_id, "Nothing found")
     else:
         visualize.display_instances(image, bboxes, r['masks'], r['class_ids'], predicted_labels , pred_probabilities,  save_dir=dirName, img_name=fileBaseName + "_ok" + fileExtension)
         bot.sendImage(chat_id, new_fn, "")
         print("Elaborated image sent to " + name)
 
-    #print("Predictions = " + str(predicted_labels))
-    #print("Probabilities = " + str(pred_probabilities))
+
+    for label in unique_labels:
+        n_label = predicted_labels.count(label)
+        bot.sendMessage(chat_id, "I have found " + str(n_label) + " " + label)
 
 
 

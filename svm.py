@@ -3,9 +3,11 @@ import pprint
 import time
 
 from sklearn.metrics import classification_report, confusion_matrix
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import (GridSearchCV, cross_val_score,
+                                     train_test_split)
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
+from sklearn.utils import shuffle
 
 DATA_ABSOLUTE = 'data/'
 MODEL_ABSOLUTE = 'classifier/'
@@ -41,20 +43,34 @@ with open(DATA_ABSOLUTE+'scaler.pickle', 'wb') as handle:
 
 start = time.time()
 
+#params_grid = [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4], 'C': [1, 10, 100, 1000]},
+#                    {'kernel': ['linear'], 'C': [1, 10, 100, 1000]}]
+
 print('Start training at ' + str(start))
 
-svm_model = SVC(kernel = "rbf", verbose=True, probability=True, class_weight= "balanced")
+#svm_model = GridSearchCV(SVC(class_weight= "balanced", verbose=True), params_grid, cv=2)
+#svm_model.fit(X_train, ytrain)
+
+svm_model = SVC(kernel = "rbf", verbose=True, probability=True, class_weight= "balanced", C = 1000, gamma=0.001)
 svm_model.fit(Xtrain, ytrain)
 
 print('End training, running time: %.4f seconds' % (time.time()-start))
 
 print('Saving model..')
-with open(MODEL_ABSOLUTE + 'SVM_resnet18_neural_features.pickle', 'wb') as handle:
+with open(MODEL_ABSOLUTE + 'SVM_resnet18_neural_features_diretto_senza_grid.pickle', 'wb') as handle:
     pickle.dump(svm_model, handle)
 
 
-preds = svm_model.predict(Xtest)
+#preds = svm_model.predict(Xtest)
 
+# print('Best score for training data:', svm_model.best_score_,"\n") 
+# # View the best parameters for the model found using grid search
+# print('Best C:',svm_model.best_estimator_.C,"\n") 
+# print('Best Kernel:',svm_model.best_estimator_.kernel,"\n")
+# print('Best Gamma:',svm_model.best_estimator_.gamma,"\n")
+
+# final_model = svm_model.best_estimator_
+preds = svm_model.predict(Xtest)
 
 print('Classification Report')
 print(classification_report(ytest, preds))
@@ -63,5 +79,4 @@ print('Confusion Matrix')
 try:
     pprint(confusion_matrix(ytest, preds))
 except:
-    print(confusion_matrix)
-
+    print(confusion_matrix(ytest, preds))
