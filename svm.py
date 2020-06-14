@@ -13,64 +13,67 @@ DATA_ABSOLUTE = 'data/'
 MODEL_ABSOLUTE = 'classifier/'
 
 # Get features extracted from resnet18 model into features_data
-with open(DATA_ABSOLUTE+'features_resnet18.pickle', 'rb') as handle:
+with open(DATA_ABSOLUTE+'bow_features_for_SVM.pickle', 'rb') as handle:
     features_data = pickle.load(handle)
 
 
-filenames = features_data['filenames']
-with open(DATA_ABSOLUTE+'filenames.pickle', 'wb') as handle:
-        pickle.dump(filenames, handle)
+# filenames = features_data['filenames']
+# with open(DATA_ABSOLUTE+'filenames.pickle', 'wb') as handle:
+#         pickle.dump(filenames, handle)
 
+# labels = features_data['labels']
+# with open(DATA_ABSOLUTE+'labels.pickle', 'wb') as handle:
+#         pickle.dump(labels, handle)
+
+
+# features_neurali = features_data['neural_features']
+# bow_features = features_data['bow_features']
+
+bow_features = features_data['features']
 labels = features_data['labels']
-with open(DATA_ABSOLUTE+'labels.pickle', 'wb') as handle:
-        pickle.dump(labels, handle)
-
-
-features_neurali = features_data['neural_features']
-bow_features = features_data['bow_features']
-
+#print(bow_features.shape)
 
 ## Train SVM Model on Neural Features (SUBCATEGORIES)
-Xtrain, Xtest, ytrain, ytest = train_test_split(features_neurali, labels, test_size=0.2)
+Xtrain, Xtest, ytrain, ytest = train_test_split(bow_features, labels, test_size=0.2)
 
 # Normalize features before training
 scaler = StandardScaler()
 X_train = scaler.fit_transform(Xtrain)
 X_test = scaler.transform(Xtest)
 
-with open(DATA_ABSOLUTE+'scaler.pickle', 'wb') as handle:
+with open(DATA_ABSOLUTE+'sift_scaler.pickle', 'wb') as handle:
         pickle.dump(scaler, handle)
 
 start = time.time()
 
-#params_grid = [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4], 'C': [1, 10, 100, 1000]},
-#                    {'kernel': ['linear'], 'C': [1, 10, 100, 1000]}]
+params_grid = [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4], 'C': [1, 10, 100, 1000]},
+                    {'kernel': ['poly'], 'gamma': [1e-3, 1e-4], 'C': [1, 10, 100, 1000]}]
 
 print('Start training at ' + str(start))
 
-#svm_model = GridSearchCV(SVC(class_weight= "balanced", verbose=True), params_grid, cv=2)
-#svm_model.fit(X_train, ytrain)
+svm_model = GridSearchCV(SVC(class_weight= "balanced", verbose=True), params_grid, cv=3)
+svm_model.fit(X_train, ytrain)
 
-svm_model = SVC(kernel = "rbf", verbose=True, probability=True, class_weight= "balanced", C = 1000, gamma=0.001)
-svm_model.fit(Xtrain, ytrain)
+#svm_model = SVC(kernel = "rbf", verbose=True, probability=True, class_weight= "balanced", C = 1000, gamma=0.001)
+#svm_model.fit(Xtrain, ytrain)
 
 print('End training, running time: %.4f seconds' % (time.time()-start))
 
 print('Saving model..')
-with open(MODEL_ABSOLUTE + 'SVM_resnet18_neural_features_diretto_senza_grid.pickle', 'wb') as handle:
+with open(MODEL_ABSOLUTE + 'SVM_resnet18_sift_features.pickle', 'wb') as handle:
     pickle.dump(svm_model, handle)
 
 
 #preds = svm_model.predict(Xtest)
 
-# print('Best score for training data:', svm_model.best_score_,"\n") 
-# # View the best parameters for the model found using grid search
-# print('Best C:',svm_model.best_estimator_.C,"\n") 
-# print('Best Kernel:',svm_model.best_estimator_.kernel,"\n")
-# print('Best Gamma:',svm_model.best_estimator_.gamma,"\n")
+print('Best score for training data:', svm_model.best_score_,"\n") 
+# View the best parameters for the model found using grid search
+print('Best C:',svm_model.best_estimator_.C,"\n") 
+print('Best Kernel:',svm_model.best_estimator_.kernel,"\n")
+print('Best Gamma:',svm_model.best_estimator_.gamma,"\n")
 
-# final_model = svm_model.best_estimator_
-preds = svm_model.predict(Xtest)
+final_model = svm_model.best_estimator_
+preds = final_model.predict(Xtest)
 
 print('Classification Report')
 print(classification_report(ytest, preds))

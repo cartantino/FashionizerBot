@@ -70,7 +70,7 @@ def classify_image_svm(img, feature_extractor, svm_classifier, preprocess_input)
     return pred[0], max(max(prob_pred))
 
 
-def image_retrieval(img, feature_extractor, kdTree, preprocess_input):
+def image_retrieval(img, feature_extractor, kdTree, preprocess_input, k_neighbors):
     with open('data/filenames.pickle', 'rb') as handle:
         filenames = pickle.load(handle)
     dim = (224, 224)
@@ -80,7 +80,7 @@ def image_retrieval(img, feature_extractor, kdTree, preprocess_input):
     neural_features = feature_extractor.predict(x)[0]
     neural_features = neural_features.reshape(len(neural_features),)
     neural_features = [neural_features]
-    dist, indexes = kdTree.query(neural_features, k = 5) # return 5 images per bb
+    dist, indexes = kdTree.query(neural_features, k = k_neighbors) # return k images per bb
     retrieval_filenames = [filenames[index] for index in indexes[0]]
     distances = dist[0]
     print(distances)
@@ -154,7 +154,7 @@ def imageHandler(bot, message, chat_id, local_filename, name):
 
     predicted_labels = []
     pred_probabilities = []
-
+    cropped_images = []
     
     for i, bb in enumerate(bboxes):
         #current_mask = mask[:,:,i]
@@ -168,38 +168,41 @@ def imageHandler(bot, message, chat_id, local_filename, name):
         #prediction, probabilities = classify_image_svm(cropped, feature_extractor, svm_classifier, bot.getPreprocessingResnet18())
         predicted_labels.append(prediction)
         pred_probabilities.append(probabilities)
-        distances, filenames = image_retrieval(cropped, feature_extractor, KdTree_retrieval, bot.getPreprocessingResnet18())
-        
-        bot.sendMessage(chat_id, "These are the 5 most similar images to " + prediction)
-        for dist, file_ in zip(distances, filenames):
-            head, tail = os.path.split(file_.replace('/', '\\'))
-            print(file_)
-            print("Head = " + head)
-            print("Tail = " + head)
-            CURRENT_PATH = os.path.join(cur_dir, 'Dataset', 'fashion-dataset','images', tail)
-            print("CURRENT PATH = " + CURRENT_PATH)
-            bot.sendImage(chat_id, CURRENT_PATH, dist)
-        
-
-    
-    print(predicted_labels)
-    unique_labels = unique(predicted_labels)
-    print(unique_labels)
-
+        cropped_images.append(cropped)
 
 
 
     if(len(bboxes) == 0):
         bot.sendMessage(chat_id, "Nothing found")
     else:
-        visualize.display_instances(image, bboxes, r['masks'], r['class_ids'], predicted_labels , pred_probabilities,  save_dir=dirName, img_name=fileBaseName + "_ok" + fileExtension)
+        bbox_colors = visualize.display_instances(image, bboxes, r['masks'], r['class_ids'], predicted_labels , pred_probabilities,  save_dir=dirName, img_name=fileBaseName + "_ok" + fileExtension)
         bot.sendImage(chat_id, new_fn, "")
         print("Elaborated image sent to " + name)
+        print(bbox_colors)
+        print(predicted_labels)
+        unique_labels = unique(predicted_labels)
+        print(unique_labels)
+
+        for label in unique_labels:
+            n_label = predicted_labels.count(label)
+            bot.sendMessage(chat_id, "I have found " + str(n_label) + " " + label)
+
+        k = 3
+        for prediction, cropped, color in zip(predicted_labels, cropped_images, bbox_colors):
+            distances, filenames = image_retrieval(cropped, feature_extractor, KdTree_retrieval, bot.getPreprocessingResnet18(), k)
+            bot.sendMessage(chat_id, "These are the " + str(k) + " most similar images to " + prediction + " found in " + color + " bounding box")
+            for dist, file_ in zip(distances, filenames):
+                head, tail = os.path.split(file_.replace('/', '\\'))
+                CURRENT_PATH = os.path.join(cur_dir, 'Dataset', 'fashion-dataset','images', tail)
+                print("CURRENT PATH = " + CURRENT_PATH)
+                bot.sendImage(chat_id, CURRENT_PATH, "")
+        
+
+    
 
 
-    for label in unique_labels:
-        n_label = predicted_labels.count(label)
-        bot.sendMessage(chat_id, "I have found " + str(n_label) + " " + label)
+
+ 
 
 
 
