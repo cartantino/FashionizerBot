@@ -19,7 +19,8 @@ conda activate VIPM
 
 ## Hands on fashionizerBot backbone
 
-> ### Segmentation
+### Segmentation
+
 >
 > - MaskRCNN (MatterPort implementation, *[matterport/Mask_RCNN](https://github.com/matterport/Mask_RCNN).)* 
 > - Segmentation to identify ROI and classify them as ['clothes', 'no clothes']
@@ -27,7 +28,8 @@ conda activate VIPM
 > ### Results report
 > ![Segmentation Report](/Image/MaskRCNN_Report.png "MaskRCNN, results on test set.")
 
-> ### Classification
+### Classification
+
 >
 > - Resnet18 finetuning 
 > - Resnet18 features + SVM (Kernel = 'rbf', C = 1000, gamma = 1*e-3)
@@ -36,7 +38,8 @@ conda activate VIPM
 > ![Classification Report](/Image/Classification_Report.png "Resnet18 neural features + SVM, results on test set.")
 
 
->### Image retrieval
+### Image retrieval
+
 >
 > - KDTree from neural features
 > - KDTree from BOW features
@@ -44,7 +47,8 @@ conda activate VIPM
 > ![Segmentation Report](/Image/KDTree_Report.png "MaskRCNN, results on test set.")
 
 
->### Actual configuration after tests
+### Actual configuration after tests
+
 >
 > - Segmentation : MaskRCNN
 > - Classification : Resnet18 neural features + SVM
