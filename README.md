@@ -25,7 +25,7 @@ conda activate VIPM
 > - Segmentation to identify ROI and classify them as ['clothes', 'no clothes']
 >
 > ### Results report
-> [![Segmentation Report](/Image/MaskRCNN_Report.jpg "MaskRCNN, results on test set.")]
+> ![Segmentation Report](/Image/MaskRCNN_Report.png "MaskRCNN, results on test set.")
 
 > ### Classification
 >
@@ -33,7 +33,7 @@ conda activate VIPM
 > - Resnet18 features + SVM (Kernel = 'rbf', C = 1000, gamma = 1*e-3)
 > - BoW Features + SVM
 > ### Results report
-> [![Segmentation Report](/Image/Classification_Report.png "Resnet18 neural features + SVM, results on test set.")]
+> ![Classification Report](/Image/Classification_Report.png "Resnet18 neural features + SVM, results on test set.")
 
 
 >### Image retrieval
@@ -41,7 +41,7 @@ conda activate VIPM
 > - KDTree from neural features
 > - KDTree from BOW features
 > ### Results report
-> [![Segmentation Report](/Image/KDTree_Report.png "MaskRCNN, results on test set.")]
+> ![Segmentation Report](/Image/KDTree_Report.png "MaskRCNN, results on test set.")
 
 
 >### Actual configuration after tests
