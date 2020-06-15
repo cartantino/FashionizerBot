@@ -66,7 +66,8 @@ def classify_image_svm(img, feature_extractor, svm_classifier, preprocess_input)
     neural_features = feature_extractor.predict(x)[0]
     neural_features = neural_features.reshape(len(neural_features),)
     neural_features = [neural_features]
-    features = scaler.transform(neural_features)
+    #features = scaler.transform(neural_features)
+    features = neural_features
     pred = svm_classifier.predict(features)
     prob_pred = svm_classifier.predict_proba(features)
     return pred[0], max(max(prob_pred))
