@@ -17,6 +17,10 @@ conda env create -f environment.yml
 conda activate VIPM
 ```
 
+### Examples
+
+![Pipeline example](/Image/pipeline.png "Pipeline")
+
 ## Hands on fashionizerBot backbone
 
 ### Segmentation
