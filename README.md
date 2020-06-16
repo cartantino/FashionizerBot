@@ -27,15 +27,22 @@ conda activate VIPM
 >![Classification example](/Image/girl.jpg "Classification")
 
 ## Retrieval example
->![Retrieval example](/Image/retrieval_example.jpg "Retrieval")
+>![Retrieval example](/Image/retrieval_example.png "Retrieval")
 
 
 ## Hands on fashionizerBot backbone
 
+### Bot
+>
+> - Basic implementation of the Bot picked up from **[dros1986/python_bot](https://github.com/dros1986/python_bot).)**
+> - `start_fashionizer.py` does all the works:
+> - Initialize the Updater that handles the Bot functions and input messages
+> - Loading of the MaskRCNN Resnet18 and SVM only once when the Bot starts
+
 ### Segmentation
 
 >
-> - MaskRCNN (MatterPort implementation, *[matterport/Mask_RCNN](https://github.com/matterport/Mask_RCNN).)* 
+> - MaskRCNN (MatterPort implementation, **[matterport/Mask_RCNN](https://github.com/matterport/Mask_RCNN).)** 
 > - Segmentation to identify ROI and classify them as ['clothes', 'no clothes']
 >
 > ### Results report
