@@ -73,3 +73,9 @@ conda activate VIPM
 > - Segmentation : MaskRCNN
 > - Classification : Resnet18 neural features + SVM
 > - Retrieval : Resnet18 neural features + KdTree
+
+
+### Contacts
+For any questions or doubt do not hesitate to contact us : 
+> - Costantino Carta (c.carta4@campus.unimib.it)
+> - Hamza Amrani (h.amrani@campus.unimib.it)
