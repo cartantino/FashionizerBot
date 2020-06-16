@@ -19,7 +19,16 @@ conda activate VIPM
 
 ### Examples
 
-![Pipeline example](/Image/pipeline.png "Pipeline")
+
+## Pipeline example
+>![Pipeline example](/Image/pipeline.png "Pipeline")
+
+## Classification example
+>![Classification example](/Image/girl.jpg "Classification")
+
+## Retrieval example
+>![Retrieval example](/Image/retrieval_example.jpg "Retrieval")
+
 
 ## Hands on fashionizerBot backbone
 
