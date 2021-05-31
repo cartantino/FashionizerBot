@@ -34,7 +34,7 @@ conda activate VIPM
 
 ### Bot
 >
-> - Basic implementation of the Bot picked up from **[dros1986/python_bot](https://github.com/dros1986/python_bot).)**
+> - Basic implementation of the Bot picked up from **[dros1986/python_bot](https://github.com/dros1986/python_bot).**
 > - `start_fashionizer.py` does all the works:
 > - Initialize the Updater that handles the Bot functions and input messages
 > - Loading of the MaskRCNN Resnet18 and SVM only once when the Bot starts
