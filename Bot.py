@@ -188,7 +188,7 @@ class Bot:
 
 
 if __name__ == "__main__":
-    bot = Bot('128366843:AAHovviK9AQDbcWJkM9JkqDAt8B5oLUUCQI')
+    bot = Bot('your_bot_id')
     while True:
         #print(bot.getUpdates())
         for u in bot.getUpdates():
